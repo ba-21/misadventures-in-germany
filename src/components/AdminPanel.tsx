@@ -2,8 +2,8 @@ import { type ChangeEvent, type Dispatch, type FormEvent, type SetStateAction, u
 import './AdminPanel.css'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import type { Tables } from '../lib/database.types'
+import { withSiteSettingsDefaults, type SiteSettings } from '../lib/siteSettings'
 
-type SiteSettingsRow = Tables<'site_settings'>
 type PostRow = Tables<'posts'>
 type PopularPostRow = Tables<'popular_posts'>
 type RecentPostRow = Tables<'recent_posts'>
@@ -165,7 +165,7 @@ function AdminPanel() {
     password: '',
     confirmPassword: '',
   })
-  const [siteSettings, setSiteSettings] = useState<SiteSettingsRow | null>(null)
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null)
   const [posts, setPosts] = useState<EditablePost[]>([])
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [popularPosts, setPopularPosts] = useState<EditableSidebarPost[]>([])
@@ -249,7 +249,7 @@ function AdminPanel() {
 
       const mappedPosts = (postsResult.data ?? []).map(mapPost)
 
-      setSiteSettings(settingsResult.data)
+      setSiteSettings(withSiteSettingsDefaults(settingsResult.data))
       setPosts(mappedPosts)
       setSelectedPostId((current) => {
         if (current && mappedPosts.some((post) => post.id === current)) {
@@ -322,6 +322,17 @@ function AdminPanel() {
             }
           : post,
       ),
+    )
+  }
+
+  function updateSiteSettingsField<K extends keyof SiteSettings>(field: K, value: SiteSettings[K]) {
+    setSiteSettings((current) =>
+      current
+        ? {
+            ...current,
+            [field]: value,
+          }
+        : current,
     )
   }
 
@@ -487,7 +498,9 @@ function AdminPanel() {
       return
     }
 
-    const { error } = await supabase.from('site_settings').upsert(siteSettings)
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert(withSiteSettingsDefaults(siteSettings))
 
     if (error) {
       setSettingsMessage(error.message)
@@ -747,165 +760,275 @@ function AdminPanel() {
           <div className="admin-section-heading">
             <div>
               <p className="admin-kicker">Site settings</p>
-              <h1>Hero and contact details</h1>
+              <h1>Home, about, and contact pages</h1>
             </div>
           </div>
 
           {siteSettings ? (
             <form className="admin-form admin-form--two-column" onSubmit={handleSaveSettings}>
+              <div className="admin-settings-heading admin-field--full">
+                <p className="admin-kicker">Home page</p>
+                <h2>Hero and author details</h2>
+              </div>
+
               <label className="admin-field admin-field--full">
                 <span>Hero eyebrow</span>
-                <input
-                  value={siteSettings.hero_eyebrow}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            hero_eyebrow: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <input value={siteSettings.hero_eyebrow} onChange={(event) => updateSiteSettingsField('hero_eyebrow', event.target.value)} />
               </label>
 
               <label className="admin-field admin-field--full">
                 <span>Hero title</span>
-                <input
-                  value={siteSettings.hero_title}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            hero_title: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <input value={siteSettings.hero_title} onChange={(event) => updateSiteSettingsField('hero_title', event.target.value)} />
               </label>
 
               <label className="admin-field admin-field--full">
                 <span>Hero subtitle</span>
-                <textarea
-                  rows={3}
-                  value={siteSettings.hero_subtitle}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            hero_subtitle: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <textarea rows={3} value={siteSettings.hero_subtitle} onChange={(event) => updateSiteSettingsField('hero_subtitle', event.target.value)} />
               </label>
 
               <label className="admin-field">
                 <span>Author name</span>
-                <input
-                  value={siteSettings.author_name}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            author_name: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <input value={siteSettings.author_name} onChange={(event) => updateSiteSettingsField('author_name', event.target.value)} />
               </label>
 
               <label className="admin-field">
                 <span>Author initials</span>
-                <input
-                  value={siteSettings.author_initials}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            author_initials: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <input value={siteSettings.author_initials} onChange={(event) => updateSiteSettingsField('author_initials', event.target.value)} />
               </label>
 
               <label className="admin-field admin-field--full">
                 <span>Author bio</span>
-                <textarea
-                  rows={4}
-                  value={siteSettings.author_bio}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            author_bio: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <textarea rows={4} value={siteSettings.author_bio} onChange={(event) => updateSiteSettingsField('author_bio', event.target.value)} />
               </label>
 
               <label className="admin-field">
                 <span>Instagram URL</span>
-                <input
-                  value={siteSettings.instagram_url}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            instagram_url: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <input value={siteSettings.instagram_url} onChange={(event) => updateSiteSettingsField('instagram_url', event.target.value)} />
               </label>
 
               <label className="admin-field">
                 <span>YouTube URL</span>
-                <input
-                  value={siteSettings.youtube_url}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            youtube_url: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                />
+                <input value={siteSettings.youtube_url} onChange={(event) => updateSiteSettingsField('youtube_url', event.target.value)} />
               </label>
 
               <label className="admin-field admin-field--full">
                 <span>Contact email</span>
+                <input type="email" value={siteSettings.contact_email} onChange={(event) => updateSiteSettingsField('contact_email', event.target.value)} />
+              </label>
+
+              <div className="admin-settings-heading admin-field--full">
+                <p className="admin-kicker">About page</p>
+                <h2>About copy and section content</h2>
+              </div>
+
+              <label className="admin-field admin-field--full">
+                <span>About hero title</span>
+                <input value={siteSettings.about_hero_title} onChange={(event) => updateSiteSettingsField('about_hero_title', event.target.value)} />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>About story body</span>
+                <textarea
+                  rows={6}
+                  value={siteSettings.about_story_body}
+                  onChange={(event) => updateSiteSettingsField('about_story_body', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>About badges</span>
+                <textarea
+                  rows={3}
+                  value={siteSettings.about_badges}
+                  onChange={(event) => updateSiteSettingsField('about_badges', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Blog section title</span>
                 <input
-                  type="email"
-                  value={siteSettings.contact_email}
-                  onChange={(event) =>
-                    setSiteSettings((current) =>
-                      current
-                        ? {
-                            ...current,
-                            contact_email: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
+                  value={siteSettings.about_blog_section_title}
+                  onChange={(event) => updateSiteSettingsField('about_blog_section_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Blog section body</span>
+                <textarea
+                  rows={5}
+                  value={siteSettings.about_blog_section_body}
+                  onChange={(event) => updateSiteSettingsField('about_blog_section_body', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Travel pattern title</span>
+                <input
+                  value={siteSettings.about_travel_pattern_title}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel stat 1 value</span>
+                <input
+                  value={siteSettings.about_travel_pattern_stat_1_value}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_stat_1_value', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel stat 1 text</span>
+                <input
+                  value={siteSettings.about_travel_pattern_stat_1_text}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_stat_1_text', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel stat 2 value</span>
+                <input
+                  value={siteSettings.about_travel_pattern_stat_2_value}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_stat_2_value', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel stat 2 text</span>
+                <input
+                  value={siteSettings.about_travel_pattern_stat_2_text}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_stat_2_text', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel stat 3 value</span>
+                <input
+                  value={siteSettings.about_travel_pattern_stat_3_value}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_stat_3_value', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel stat 3 text</span>
+                <input
+                  value={siteSettings.about_travel_pattern_stat_3_text}
+                  onChange={(event) => updateSiteSettingsField('about_travel_pattern_stat_3_text', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Travel style title</span>
+                <input
+                  value={siteSettings.about_travel_style_title}
+                  onChange={(event) => updateSiteSettingsField('about_travel_style_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Travel style body</span>
+                <textarea
+                  rows={5}
+                  value={siteSettings.about_travel_style_body}
+                  onChange={(event) => updateSiteSettingsField('about_travel_style_body', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>About contact title</span>
+                <input
+                  value={siteSettings.about_contact_title}
+                  onChange={(event) => updateSiteSettingsField('about_contact_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>About contact body</span>
+                <textarea
+                  rows={3}
+                  value={siteSettings.about_contact_body}
+                  onChange={(event) => updateSiteSettingsField('about_contact_body', event.target.value)}
+                />
+              </label>
+
+              <div className="admin-settings-heading admin-field--full">
+                <p className="admin-kicker">Contact page</p>
+                <h2>Contact hero, form, and sidebar content</h2>
+              </div>
+
+              <label className="admin-field admin-field--full">
+                <span>Contact background image URL</span>
+                <input
+                  value={siteSettings.contact_background_image_url}
+                  onChange={(event) => updateSiteSettingsField('contact_background_image_url', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Contact eyebrow</span>
+                <input
+                  value={siteSettings.contact_hero_eyebrow}
+                  onChange={(event) => updateSiteSettingsField('contact_hero_eyebrow', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Contact hero title</span>
+                <input
+                  value={siteSettings.contact_hero_title}
+                  onChange={(event) => updateSiteSettingsField('contact_hero_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Contact hero body</span>
+                <textarea
+                  rows={3}
+                  value={siteSettings.contact_hero_body}
+                  onChange={(event) => updateSiteSettingsField('contact_hero_body', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Contact form title</span>
+                <input
+                  value={siteSettings.contact_form_title}
+                  onChange={(event) => updateSiteSettingsField('contact_form_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Contact form intro</span>
+                <textarea
+                  rows={2}
+                  value={siteSettings.contact_form_intro}
+                  onChange={(event) => updateSiteSettingsField('contact_form_intro', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Contact sidebar title</span>
+                <input
+                  value={siteSettings.contact_sidebar_title}
+                  onChange={(event) => updateSiteSettingsField('contact_sidebar_title', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Contact sidebar body</span>
+                <textarea
+                  rows={3}
+                  value={siteSettings.contact_sidebar_body}
+                  onChange={(event) => updateSiteSettingsField('contact_sidebar_body', event.target.value)}
+                />
+              </label>
+
+              <label className="admin-field admin-field--full">
+                <span>Contact tips</span>
+                <textarea
+                  rows={4}
+                  value={siteSettings.contact_tips}
+                  onChange={(event) => updateSiteSettingsField('contact_tips', event.target.value)}
                 />
               </label>
 

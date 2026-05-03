@@ -3,6 +3,7 @@ import './App.css'
 import authorAvatar from './assets/julia-avatar-cartoon.webp'
 import AdminPanel from './components/AdminPanel'
 import type { Tables } from './lib/database.types'
+import { defaultSiteSettings, splitSettingList, withSiteSettingsDefaults, type SiteSettings } from './lib/siteSettings'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 type Story = {
@@ -19,6 +20,7 @@ type Story = {
 }
 
 type Post = {
+  slug: string
   title: string
   blurb: string
 }
@@ -26,9 +28,10 @@ type Post = {
 type ViewMode =
   | { kind: 'site' }
   | { kind: 'admin' }
+  | { kind: 'about' }
+  | { kind: 'contact' }
   | { kind: 'post'; slug: string }
 
-type SiteSettings = Tables<'site_settings'>
 type StoryRow = Tables<'posts'>
 type SidebarPostRow = Tables<'popular_posts'>
 type RecentPostRow = Tables<'recent_posts'>
@@ -40,20 +43,22 @@ const publishedDateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 })
 
-const defaultSettings: SiteSettings = {
-  author_bio:
-    'I am Julia, a chronic over-planner documenting what happens when a color-coded itinerary meets Deutsche Bahn and questionable shortcuts.',
-  author_initials: 'JT',
-  author_name: 'Julia',
-  contact_email: 'hello@misadventuresingermany.com',
-  hero_eyebrow: 'Travel notes from missed turns and lucky detours',
-  hero_subtitle:
-    'A scrapbook-style travel blog about trains missed by seconds, bakeries discovered by accident, and every chaotic mile in between.',
-  hero_title: 'Misadventures in Germany',
-  instagram_url: 'https://www.instagram.com',
-  singleton: true,
-  updated_at: '',
-  youtube_url: 'https://www.youtube.com',
+const sidebarPostSlugAliases: Record<string, string> = {
+  'the-cologne-cathedral-sprint': 'koln-cathedral-sprint',
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function resolveSidebarPostSlug(title: string): string {
+  const normalized = slugify(title)
+  return sidebarPostSlugAliases[normalized] ?? normalized
 }
 
 const defaultStories: Story[] = [
@@ -169,14 +174,17 @@ Once the panic passed, Munich softened considerably. The city has a way of makin
 
 const defaultPopularPosts: Post[] = [
   {
+    slug: 'how-i-ordered-seven-mustards',
     title: 'How I Ordered Seven Mustards',
     blurb: 'A sausage stand misunderstanding with excellent consequences.',
   },
   {
+    slug: 'lost-in-the-black-forest',
     title: 'Lost in the Black Forest',
     blurb: 'A scenic detour featuring fog, cake, and zero phone signal.',
   },
   {
+    slug: 'koln-cathedral-sprint',
     title: 'The Cologne Cathedral Sprint',
     blurb: 'Arrived reverent, left breathless, still worth it.',
   },
@@ -184,14 +192,17 @@ const defaultPopularPosts: Post[] = [
 
 const defaultRecentPosts: Post[] = [
   {
+    slug: 'frankfurt-layover-panic',
     title: 'Frankfurt Layover Panic',
     blurb: 'Twenty-seven minutes, one wrong escalator, and a surprisingly calm pretzel vendor.',
   },
   {
+    slug: 'leipzig-tram-roulette',
     title: 'Leipzig Tram Roulette',
     blurb: 'I boarded confidently, exited somewhere interpretive, and found a great coffee shop.',
   },
   {
+    slug: 'neuschwanstein-in-bad-shoes',
     title: 'Neuschwanstein in Bad Shoes',
     blurb: 'A castle worth the climb, even when your footwear files a formal complaint.',
   },
@@ -223,8 +234,100 @@ function toStory(story: StoryRow): Story {
 
 function toSidebarPost(post: SidebarPostRow | RecentPostRow): Post {
   return {
+    slug: resolveSidebarPostSlug(post.title),
     title: post.title,
     blurb: post.blurb,
+  }
+}
+
+const sidebarFallbackStoryTemplates: Record<
+  string,
+  Omit<Story, 'slug' | 'title' | 'summary'>
+> = {
+  'how-i-ordered-seven-mustards': {
+    location: 'Nuremberg',
+    dayLabel: 'Side Note',
+    highlight: 'Ordering with confidence only works if the confidence is attached to the right noun.',
+    body: `The plan was simple enough: point at one sausage, ask for mustard, look competent, and leave with lunch. Instead, I managed to trigger an escalating sequence of condiments that suggested I was either hosting a tasting panel or quietly opening a mustard dealership.
+
+The vendor was efficient, unbothered, and far too experienced to be surprised by my improvised German. By the time I realized I had said something closer to "several kinds, please" than "just a little," the counter was already covered in tiny yellow negotiations.
+
+In fairness, it was not a total failure. Germany tends to reward even bad ordering decisions with something delicious, and this one came with a useful reminder: if you are going to guess, do it in front of people who know how to keep the line moving.`,
+    image:
+      'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: 'Street food stand serving sausages with mustard',
+    publishedAt: '2026-04-27T09:10:00+00:00',
+  },
+  'lost-in-the-black-forest': {
+    location: 'Black Forest',
+    dayLabel: 'Side Note',
+    highlight: 'Dense trees, low fog, and one excellent cake stop can make a wrong turn feel extremely deliberate.',
+    body: `Some places make getting lost feel like incompetence. The Black Forest makes it feel like a mood board. I missed the correct walking path, followed what looked like a reasonable trail, and ended up in the kind of fog that makes every tree look slightly more literary than necessary.
+
+The practical part was less romantic. Signal disappeared, the trail markers became sporadic, and I had to decide whether confidence or caution was more convincing. Fortunately, the region also seems committed to placing cake within reach of mild crisis.
+
+By the time I found my way back, the detour had fully rewritten the day. It is hard to stay annoyed when the scenery is dramatic, the air smells like wet pine, and someone hands you a slice of something dense and perfect on a porcelain plate.`,
+    image:
+      'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: 'Misty path through the Black Forest',
+    publishedAt: '2026-04-26T08:40:00+00:00',
+  },
+  'frankfurt-layover-panic': {
+    location: 'Frankfurt',
+    dayLabel: 'Side Note',
+    highlight: 'A short layover becomes much longer in your head the second you take the wrong escalator.',
+    body: `Frankfurt was supposed to be a brief and highly controlled transfer. Instead, it became a time trial involving one wrong escalator, a platform display that changed just as I reached it, and the very specific kind of optimism people develop when there are still twenty-seven minutes left on the clock.
+
+The station itself did not help by being efficient in a way that assumes you also intend to be efficient. I went up when I should have gone down, cut across the wrong concourse, and briefly considered whether sprinting with luggage counts as character development.
+
+The strangest part was how calm everyone else seemed. A pretzel vendor watched the whole sequence with the expression of someone who had seen far worse by breakfast. He was probably right, but at the time I felt like the only person in Germany negotiating with stairs on a deadline.`,
+    image:
+      'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: 'Busy European train station concourse',
+    publishedAt: '2026-04-28T07:55:00+00:00',
+  },
+  'neuschwanstein-in-bad-shoes': {
+    location: 'Neuschwanstein',
+    dayLabel: 'Side Note',
+    highlight: 'Fairy-tale scenery is less forgiving when your footwear has quietly stopped supporting the mission.',
+    body: `Neuschwanstein is the kind of place that encourages heroic expectations. Unfortunately, I arrived dressed for "picturesque outing" rather than "inclined approach with consequences." The castle was stunning; my shoes were emotionally unavailable.
+
+Every scenic stretch on the way up introduced a fresh negotiation between beauty and blisters. The views kept improving, which was tactically useful because it prevented me from focusing entirely on the poor life choices happening below the ankle.
+
+Still, there are worse places to learn a lesson about preparation. The whole landscape looks engineered to reward persistence, even when that persistence is limping slightly. By the time the castle finally filled the frame, I was willing to forgive both Bavaria and myself.`,
+    image:
+      'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: 'Neuschwanstein Castle above the Bavarian landscape',
+    publishedAt: '2026-04-25T10:05:00+00:00',
+  },
+}
+
+function buildSidebarFallbackStory(post: Post): Story {
+  const template = sidebarFallbackStoryTemplates[post.slug]
+
+  if (template) {
+    return {
+      slug: post.slug,
+      title: post.title,
+      summary: post.blurb,
+      ...template,
+    }
+  }
+
+  return {
+    slug: post.slug,
+    title: post.title,
+    location: 'Germany',
+    dayLabel: 'Side Note',
+    summary: post.blurb,
+    highlight: 'A sidebar note turned into its own stop in the journal.',
+    body: `This entry started as a short sidebar note, then immediately behaved like something that deserved its own page. The short version is still accurate: ${post.blurb}
+
+The longer version is that some moments never arrive neatly. They show up as fragments, small details, or half-finished notes you mean to expand later. This page holds that space until the full story gets written out properly.`,
+    image:
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: `${post.title} travel note`,
+    publishedAt: null,
   }
 }
 
@@ -233,6 +336,14 @@ function getViewMode(): ViewMode {
 
   if (hash.startsWith('#admin')) {
     return { kind: 'admin' }
+  }
+
+  if (hash === '#about-me') {
+    return { kind: 'about' }
+  }
+
+  if (hash === '#contact') {
+    return { kind: 'contact' }
   }
 
   if (hash.startsWith('#post/')) {
@@ -281,10 +392,8 @@ function StoryDetailView({
     <div className="page-shell">
       <header className="topbar">
         <a href="#journal">Home</a>
-        <a href="#archive">Archive</a>
-        <a href="#about">About Me</a>
+        <a href="#about-me">About Me</a>
         <a href="#contact">Contact</a>
-        <a href="#admin">Admin</a>
       </header>
 
       <main className="blog-layout story-detail-layout">
@@ -295,9 +404,11 @@ function StoryDetailView({
           </section>
         ) : story ? (
           <article className="story-detail-card">
-            <a href="#archive" className="detail-back-link">
-              Back to search
-            </a>
+            <a
+              href="#archive"
+              className="detail-back-link detail-back-link--icon"
+              aria-label="Back to search"
+            />
             <p className="story-detail-kicker">{story.location}</p>
             <h1>{story.title}</h1>
             <div className="story-detail-meta">
@@ -337,9 +448,11 @@ function StoryDetailView({
         )}
 
         <aside className="story-detail-sidebar">
-          <section className="sidebar-card author-card" id="about">
+          <section className="sidebar-card author-card">
             <div className="section-label compact">Hello!</div>
-            <img src={authorAvatar} alt={`Cartoon portrait of ${settings.author_name}`} className="avatar" />
+            <a href="#about-me" className="avatar-link" aria-label={`Read more about ${settings.author_name}`}>
+              <img src={authorAvatar} alt={`Cartoon portrait of ${settings.author_name}`} className="avatar" />
+            </a>
             <p>{settings.author_bio}</p>
           </section>
 
@@ -352,7 +465,7 @@ function StoryDetailView({
               <a href={settings.youtube_url} target="_blank" rel="noreferrer">
                 YouTube
               </a>
-              <a href={`mailto:${settings.contact_email}`}>Email</a>
+              <a href="#contact">Email</a>
             </div>
           </section>
         </aside>
@@ -361,10 +474,288 @@ function StoryDetailView({
   )
 }
 
+function AboutPageView({
+  settings,
+  stories,
+}: {
+  settings: SiteSettings
+  stories: Story[]
+}) {
+  const currentYear = new Date().getFullYear()
+  const galleryStories = (stories.length > 0 ? stories : defaultStories).slice(0, 3)
+  const highlightStory = galleryStories[0] ?? defaultStories[0]
+  const aboutStoryParagraphs = getBodyParagraphs(settings.about_story_body)
+  const aboutBlogParagraphs = getBodyParagraphs(settings.about_blog_section_body)
+  const aboutTravelStyleParagraphs = getBodyParagraphs(settings.about_travel_style_body)
+  const aboutBadges = splitSettingList(settings.about_badges)
+
+  return (
+    <div className="page-shell">
+      <header className="topbar">
+        <a href="#journal">Home</a>
+        <a href="#about-me">About Me</a>
+        <a href="#contact">Contact</a>
+      </header>
+
+      <main className="blog-layout about-layout">
+        <section className="about-hero-card">
+          <div className="about-hero-copy">
+            <p className="story-detail-kicker">About the author</p>
+            <h1>{settings.about_hero_title}</h1>
+            <p className="about-lead">{settings.author_bio}</p>
+            {aboutStoryParagraphs.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+
+            <div className="about-pill-row">
+              {aboutBadges.map((badge) => (
+                <span key={badge}>{badge}</span>
+              ))}
+            </div>
+          </div>
+
+          <aside className="about-portrait-panel">
+            <div className="about-portrait-frame">
+              <img src={authorAvatar} alt={`Portrait of ${settings.author_name}`} className="about-portrait" />
+            </div>
+            <div className="about-note-card">
+              <p className="archive-kicker">Current fixation</p>
+              <h2>{highlightStory.title}</h2>
+              <p>
+                The latest notebook-worthy detour came from {highlightStory.location}. That seems
+                statistically likely to keep happening.
+              </p>
+              <a href={`#post/${encodeURIComponent(highlightStory.slug)}`} className="detail-back-link">
+                Read the latest story
+              </a>
+            </div>
+          </aside>
+        </section>
+
+        <div className="about-grid">
+          <section className="about-card">
+            <div className="section-label compact">{settings.about_blog_section_title}</div>
+            {aboutBlogParagraphs.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </section>
+
+          <section className="about-card">
+            <div className="section-label compact">{settings.about_travel_pattern_title}</div>
+            <div className="about-stat-grid">
+              <article className="about-stat-card">
+                <span className="about-stat-value">{settings.about_travel_pattern_stat_1_value}</span>
+                <p>{settings.about_travel_pattern_stat_1_text}</p>
+              </article>
+              <article className="about-stat-card">
+                <span className="about-stat-value">{settings.about_travel_pattern_stat_2_value}</span>
+                <p>{settings.about_travel_pattern_stat_2_text}</p>
+              </article>
+              <article className="about-stat-card">
+                <span className="about-stat-value">{settings.about_travel_pattern_stat_3_value}</span>
+                <p>{settings.about_travel_pattern_stat_3_text}</p>
+              </article>
+            </div>
+          </section>
+
+          <section className="about-card about-gallery-card">
+            <div className="section-label compact">Field Notes in Pictures</div>
+            <div className="about-gallery-grid">
+              {galleryStories.map((story) => (
+                <a
+                  className="about-gallery-item"
+                  href={`#post/${encodeURIComponent(story.slug)}`}
+                  key={story.slug}
+                >
+                  <img src={story.image} alt={story.imageAlt} className="about-gallery-image" />
+                  <div className="about-gallery-caption">
+                    <span>{story.location}</span>
+                    <h2>{story.title}</h2>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <section className="about-card">
+            <div className="section-label compact">{settings.about_travel_style_title}</div>
+            {aboutTravelStyleParagraphs.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </section>
+
+          <section className="about-card about-contact-card" id="contact">
+            <div className="section-label compact">{settings.about_contact_title}</div>
+            <p>{settings.about_contact_body}</p>
+            <div className="social-links">
+              <a href={settings.instagram_url} target="_blank" rel="noreferrer">
+                Instagram
+              </a>
+              <a href={settings.youtube_url} target="_blank" rel="noreferrer">
+                YouTube
+              </a>
+              <a href="#contact">Email</a>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer className="footerbar">Copyright © {currentYear} Misadventures in Germany</footer>
+    </div>
+  )
+}
+
+function ContactPageView({
+  settings,
+  stories,
+}: {
+  settings: SiteSettings
+  stories: Story[]
+}) {
+  const currentYear = new Date().getFullYear()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null)
+
+  const backgroundStory =
+    stories.find((story) => story.location === 'Heidelberg') ?? stories[0] ?? defaultStories[1]
+  const contactTips = splitSettingList(settings.contact_tips)
+  const contactBackgroundImage = settings.contact_background_image_url.trim() || backgroundStory.image
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+    const trimmedSubject = subject.trim()
+    const trimmedMessage = message.trim()
+
+    if (!trimmedName || !trimmedEmail || !trimmedSubject || !trimmedMessage) {
+      setSubmitMessage('Fill in all fields before opening your email draft.')
+      return
+    }
+
+    const body = [
+      `Name: ${trimmedName}`,
+      `Email: ${trimmedEmail}`,
+      '',
+      trimmedMessage,
+    ].join('\n')
+
+    window.location.href = `mailto:${settings.contact_email}?subject=${encodeURIComponent(
+      trimmedSubject,
+    )}&body=${encodeURIComponent(body)}`
+
+    setSubmitMessage('Your email app should open with a prefilled draft.')
+  }
+
+  return (
+    <div className="page-shell">
+      <header className="topbar">
+        <a href="#journal">Home</a>
+        <a href="#about-me">About Me</a>
+        <a href="#contact">Contact</a>
+      </header>
+
+      <main className="blog-layout contact-layout">
+        <section
+          className="contact-hero-card"
+          style={{
+            backgroundImage: `linear-gradient(180deg, rgba(26, 49, 67, 0.28), rgba(18, 36, 49, 0.62)), url(${contactBackgroundImage})`,
+          }}
+        >
+          <div className="contact-hero-content">
+            <p className="contact-hero-kicker">{settings.contact_hero_eyebrow}</p>
+            <h1>{settings.contact_hero_title}</h1>
+            <p>{settings.contact_hero_body}</p>
+          </div>
+        </section>
+
+        <div className="contact-grid">
+          <section className="contact-form-card">
+            <div className="section-label compact">{settings.contact_form_title}</div>
+            <p className="contact-support-copy">
+              {settings.contact_form_intro} <strong>{settings.contact_email}</strong>.
+            </p>
+
+            <form className="contact-form" onSubmit={handleSubmit}>
+              <label className="contact-field">
+                <span>Name</span>
+                <input type="text" value={name} onChange={(event) => setName(event.target.value)} />
+              </label>
+
+              <label className="contact-field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </label>
+
+              <label className="contact-field">
+                <span>Subject</span>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                />
+              </label>
+
+              <label className="contact-field contact-field--full">
+                <span>Message</span>
+                <textarea
+                  rows={8}
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                />
+              </label>
+
+              <button type="submit" className="contact-submit-button">
+                Open email draft
+              </button>
+            </form>
+
+            {submitMessage ? <p className="contact-feedback">{submitMessage}</p> : null}
+          </section>
+
+          <aside className="contact-sidebar">
+            <section className="contact-info-card">
+              <div className="section-label compact">{settings.contact_sidebar_title}</div>
+              <p>{settings.contact_sidebar_body}</p>
+              <div className="social-links">
+                <a href={settings.instagram_url} target="_blank" rel="noreferrer">
+                  Instagram
+                </a>
+                <a href={settings.youtube_url} target="_blank" rel="noreferrer">
+                  YouTube
+                </a>
+              </div>
+            </section>
+
+            <section className="contact-info-card">
+              <div className="section-label compact">Best Messages</div>
+              <ul className="contact-tip-list">
+                {contactTips.map((tip) => (
+                  <li key={tip}>{tip}</li>
+                ))}
+              </ul>
+            </section>
+          </aside>
+        </div>
+      </main>
+
+      <footer className="footerbar">Copyright © {currentYear} Misadventures in Germany</footer>
+    </div>
+  )
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [viewMode, setViewMode] = useState<ViewMode>(() => getViewMode())
-  const [settings, setSettings] = useState(defaultSettings)
+  const [settings, setSettings] = useState(defaultSiteSettings)
   const [allStories, setAllStories] = useState(defaultStories)
   const [popularPosts, setPopularPosts] = useState(defaultPopularPosts)
   const [recentPosts, setRecentPosts] = useState(defaultRecentPosts)
@@ -440,9 +831,7 @@ function App() {
         return
       }
 
-      if (settingsResult.data) {
-        setSettings(settingsResult.data)
-      }
+      setSettings(withSiteSettingsDefaults(settingsResult.data))
 
       setAllStories((storiesResult.data ?? []).map(toStory))
       setPopularPosts((popularPostsResult.data ?? []).map(toSidebarPost))
@@ -478,8 +867,20 @@ function App() {
   }, [isArchiveModalOpen])
 
   const featuredStories = allStories.slice(0, 5)
+  const storySlugs = new Set(allStories.map((story) => story.slug))
+  const sidebarFallbackStories = [...popularPosts, ...recentPosts].reduce<Story[]>((stories, post) => {
+    if (storySlugs.has(post.slug) || stories.some((story) => story.slug === post.slug)) {
+      return stories
+    }
+
+    stories.push(buildSidebarFallbackStory(post))
+    return stories
+  }, [])
+  const resolvedStories = [...allStories, ...sidebarFallbackStories]
   const selectedStory =
-    viewMode.kind === 'post' ? allStories.find((story) => story.slug === viewMode.slug) ?? null : null
+    viewMode.kind === 'post'
+      ? resolvedStories.find((story) => story.slug === viewMode.slug) ?? null
+      : null
   const isStoryLoading = viewMode.kind === 'post' && selectedStory === null && syncMessage !== null && !isFallback
 
   const normalizedQuery = archiveQuery.trim().toLowerCase()
@@ -523,6 +924,14 @@ function App() {
     return <AdminPanel />
   }
 
+  if (viewMode.kind === 'about') {
+    return <AboutPageView settings={settings} stories={allStories} />
+  }
+
+  if (viewMode.kind === 'contact') {
+    return <ContactPageView settings={settings} stories={allStories} />
+  }
+
   if (viewMode.kind === 'post') {
     return <StoryDetailView settings={settings} story={selectedStory} isLoading={isStoryLoading} />
   }
@@ -531,10 +940,8 @@ function App() {
     <div className="page-shell">
       <header className="topbar">
         <a href="#journal">Home</a>
-        <a href="#archive">Archive</a>
-        <a href="#about">About Me</a>
+        <a href="#about-me">About Me</a>
         <a href="#contact">Contact</a>
-        <a href="#admin">Admin</a>
       </header>
 
       <main className="blog-layout">
@@ -558,7 +965,11 @@ function App() {
                     key={story.slug}
                   >
                     <div className="section-label">{story.title}</div>
-                    <div className="story-photo-frame" tabIndex={0}>
+                    <a
+                      className="story-photo-frame"
+                      href={`#post/${encodeURIComponent(story.slug)}`}
+                      aria-label={`Open full story: ${story.title}`}
+                    >
                       <div className="story-photo-clip">
                         <img src={story.image} alt={story.imageAlt} className="story-photo" />
                       </div>
@@ -566,7 +977,7 @@ function App() {
                         <p>{story.summary}</p>
                         <p className="story-highlight">{story.highlight}</p>
                       </div>
-                    </div>
+                    </a>
                     <div className="story-copy">
                       <div className="story-meta">
                         <span>{story.location}</span>
@@ -636,9 +1047,11 @@ function App() {
           </section>
 
           <aside className="sidebar">
-            <section className="sidebar-card author-card" id="about">
+            <section className="sidebar-card author-card">
               <div className="section-label compact">Hello!</div>
-              <img src={authorAvatar} alt={`Cartoon portrait of ${settings.author_name}`} className="avatar" />
+              <a href="#about-me" className="avatar-link" aria-label={`Read more about ${settings.author_name}`}>
+                <img src={authorAvatar} alt={`Cartoon portrait of ${settings.author_name}`} className="avatar" />
+              </a>
               <p>{settings.author_bio}</p>
             </section>
 
@@ -647,10 +1060,14 @@ function App() {
               <div className="sidebar-list">
                 {popularPosts.length > 0 ? (
                   popularPosts.map((post) => (
-                    <article key={post.title} className="mini-post">
+                    <a
+                      key={post.slug}
+                      className="mini-post mini-post--link"
+                      href={`#post/${encodeURIComponent(post.slug)}`}
+                    >
                       <h2>{post.title}</h2>
                       <p>{post.blurb}</p>
-                    </article>
+                    </a>
                   ))
                 ) : (
                   <p className="empty-copy">Nothing featured yet.</p>
@@ -663,10 +1080,14 @@ function App() {
               <div className="sidebar-list">
                 {recentPosts.length > 0 ? (
                   recentPosts.map((post) => (
-                    <article key={post.title} className="mini-post">
+                    <a
+                      key={post.slug}
+                      className="mini-post mini-post--link"
+                      href={`#post/${encodeURIComponent(post.slug)}`}
+                    >
                       <h2>{post.title}</h2>
                       <p>{post.blurb}</p>
-                    </article>
+                    </a>
                   ))
                 ) : (
                   <p className="empty-copy">No recent entries yet.</p>
@@ -683,7 +1104,7 @@ function App() {
                 <a href={settings.youtube_url} target="_blank" rel="noreferrer">
                   YouTube
                 </a>
-                <a href={`mailto:${settings.contact_email}`}>Email</a>
+                <a href="#contact">Email</a>
               </div>
             </section>
           </aside>

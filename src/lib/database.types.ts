@@ -118,10 +118,35 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          about_badges: string
+          about_blog_section_body: string
+          about_blog_section_title: string
+          about_contact_body: string
+          about_contact_title: string
+          about_hero_title: string
+          about_story_body: string
+          about_travel_pattern_stat_1_text: string
+          about_travel_pattern_stat_1_value: string
+          about_travel_pattern_stat_2_text: string
+          about_travel_pattern_stat_2_value: string
+          about_travel_pattern_stat_3_text: string
+          about_travel_pattern_stat_3_value: string
+          about_travel_pattern_title: string
+          about_travel_style_body: string
+          about_travel_style_title: string
           author_bio: string
           author_initials: string
           author_name: string
+          contact_background_image_url: string
           contact_email: string
+          contact_form_intro: string
+          contact_form_title: string
+          contact_hero_body: string
+          contact_hero_eyebrow: string
+          contact_hero_title: string
+          contact_sidebar_body: string
+          contact_sidebar_title: string
+          contact_tips: string
           hero_eyebrow: string
           hero_subtitle: string
           hero_title: string
@@ -131,10 +156,35 @@ export type Database = {
           youtube_url: string
         }
         Insert: {
+          about_badges?: string
+          about_blog_section_body?: string
+          about_blog_section_title?: string
+          about_contact_body?: string
+          about_contact_title?: string
+          about_hero_title?: string
+          about_story_body?: string
+          about_travel_pattern_stat_1_text?: string
+          about_travel_pattern_stat_1_value?: string
+          about_travel_pattern_stat_2_text?: string
+          about_travel_pattern_stat_2_value?: string
+          about_travel_pattern_stat_3_text?: string
+          about_travel_pattern_stat_3_value?: string
+          about_travel_pattern_title?: string
+          about_travel_style_body?: string
+          about_travel_style_title?: string
           author_bio: string
           author_initials: string
           author_name: string
+          contact_background_image_url?: string
           contact_email: string
+          contact_form_intro?: string
+          contact_form_title?: string
+          contact_hero_body?: string
+          contact_hero_eyebrow?: string
+          contact_hero_title?: string
+          contact_sidebar_body?: string
+          contact_sidebar_title?: string
+          contact_tips?: string
           hero_eyebrow: string
           hero_subtitle: string
           hero_title: string
@@ -144,10 +194,35 @@ export type Database = {
           youtube_url: string
         }
         Update: {
+          about_badges?: string
+          about_blog_section_body?: string
+          about_blog_section_title?: string
+          about_contact_body?: string
+          about_contact_title?: string
+          about_hero_title?: string
+          about_story_body?: string
+          about_travel_pattern_stat_1_text?: string
+          about_travel_pattern_stat_1_value?: string
+          about_travel_pattern_stat_2_text?: string
+          about_travel_pattern_stat_2_value?: string
+          about_travel_pattern_stat_3_text?: string
+          about_travel_pattern_stat_3_value?: string
+          about_travel_pattern_title?: string
+          about_travel_style_body?: string
+          about_travel_style_title?: string
           author_bio?: string
           author_initials?: string
           author_name?: string
+          contact_background_image_url?: string
           contact_email?: string
+          contact_form_intro?: string
+          contact_form_title?: string
+          contact_hero_body?: string
+          contact_hero_eyebrow?: string
+          contact_hero_title?: string
+          contact_sidebar_body?: string
+          contact_sidebar_title?: string
+          contact_tips?: string
           hero_eyebrow?: string
           hero_subtitle?: string
           hero_title?: string

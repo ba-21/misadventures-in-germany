@@ -148,6 +148,12 @@
   grid-column: 1 / -1;
 }
 
+.admin-settings-heading {
+  display: grid;
+  gap: 0.2rem;
+  padding-top: 0.4rem;
+}
+
 .admin-field span {
   font: 700 0.8rem/1 'Manrope', sans-serif;
   letter-spacing: 0.06em;
