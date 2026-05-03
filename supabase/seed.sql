@@ -1,0 +1,3 @@
+-- Intentionally empty.
+-- The initial blog content is versioned in migrations so both local and remote
+-- environments start from the same schema and data.
